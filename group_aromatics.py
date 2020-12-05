@@ -8,6 +8,11 @@ import sys
 
 
 def check_aromatic(atom):
+    """
+    aromatic systems assumed to: be in a ring, be carbon (3 neighbors) or nitrogen (2 or 3 neighbors)
+    RDKit is unreliable for this because it doesn't handle nitrogen well, and double bond assignments in aromatic
+    systems can be incorrect
+    """
     if atom.IsInRing():
         atomic_num = atom.GetAtomicNum()
         len_neighbors = len(atom.GetNeighbors())
@@ -19,8 +24,10 @@ def check_aromatic(atom):
 
 
 def eval_dihedrals(mol, atom1, atom2):
-    # for aromatic neighbors, evaluate if the dihedral angle is within tolerance that aromaticity isn't broken
-    # this function assumes atom1 and atom2 are in valid aromatic systems; filtering should be applied before function call
+    """
+    for aromatic neighbors, evaluate if the dihedral angle is within tolerance that aromaticity isn't broken
+    this function assumes atom1 and atom2 are in valid aromatic systems; filtering should be applied before function call
+    """
     a1_idx = atom1.GetIdx()
     a2_idx = atom2.GetIdx()
     n1 = [a for a in atom1.GetNeighbors() if check_aromatic(a) and a.GetIdx() != a2_idx]
@@ -40,7 +47,12 @@ def eval_dihedrals(mol, atom1, atom2):
 
 
 def enumerate_aromatic_size(mol, atom):
-    
+    """
+    Use breadth-first search to find the contiguous aromatic group size the input atom is a part of
+    This assumes that only carbon and nitrogen can be aromatic, and assigns aromaticity as having either  2 or 3 bonds
+    This also tries to catch the case of biphenyl or similar molecules, where two distinct aromatic systems are connected
+    but should not be grouped together (as they are not in plane)
+    """
     visited = [False]*len(mol.GetAtoms())
     queue = []
     aromatic_size = 0
@@ -83,17 +95,8 @@ def embedded_aromatic(atom):
 
 if __name__ == "__main__":
 
-    #filename = "/home/nricke/work/klodaya/notebooks_klodaya/allfiles/catalystonly-molfiles/sf96x0_optsp_a0m2.mol"
-    #filename = "/home/nricke/work/klodaya/notebooks_klodaya/allfiles/catalystonly-molfiles/sf245x0_optsp_a0m2.mol"
-    #filename = "/home/nricke/work/klodaya/notebooks_klodaya/allfiles/catalystonly-molfiles/sf260x0_optsp_c1m2.mol"
-    #filename = "/home/nricke/work/klodaya/notebooks_klodaya/allfiles/catalystonly-molfiles/sf209x0_optsp_c1m2.mol"
-    #filename = "/home/nricke/work/klodaya/notebooks_klodaya/allfiles/catalystonly-molfiles/sf95x0_optsp_c1m2.mol"
-    #filename = "/home/nricke/work/klodaya/notebooks_klodaya/allfiles/catalystonly-molfiles/sf244x0_optsp_a0m2.mol"
-    #filename = sys.argv[1]
-    #m1 = Chem.MolFromMolFile(filename, removeHs=False)
-
     indir = sys.argv[1]
-
+    outfile = sys.argv[2]
     
     aromatic_extent, ring_edge, atom_num_list, catalyst = [], [], [], []
     for molfile in os.listdir(indir):
@@ -111,3 +114,4 @@ if __name__ == "__main__":
     df = pd.DataFrame({"aromatic_extent": aromatic_extent, "ring_edge": ring_edge, "Atom Number": atom_num_list, 
         "Catalyst Name": catalyst})
     print(df)
+    df.to_json(outfile)
