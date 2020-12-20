@@ -46,20 +46,43 @@ def eval_dihedrals(mol, atom1, atom2):
         return True
 
 
-def enumerate_aromatic_size(mol, atom):
+def calc_plane_deviation(atom, coords):
+    """
+    aromatic systems assumed to: be in a ring, be carbon (3 neighbors) or nitrogen (2 or 3 neighbors)
+    RDKit is unreliable for this because it doesn't handle nitrogen well, and double bond assignments in aromatic
+    systems can be incorrect
+    """
+
+    for neighbor in atom.GetNeighbors():
+
+        
+    return plane_deviation
+
+
+def enumerate_aromatic_properties(mol, atom):
     """
     Use breadth-first search to find the contiguous aromatic group size the input atom is a part of
     This assumes that only carbon and nitrogen can be aromatic, and assigns aromaticity as having either  2 or 3 bonds
     This also tries to catch the case of biphenyl or similar molecules, where two distinct aromatic systems are connected
     but should not be grouped together (as they are not in plane)
+
+    This is also a convenient function to include counts of heteroatoms, number of aromatic hydrogen in a ring system, and possibly
+    account distance to embedded aromatic nitrogen as well
+    The coordinates should also be available here, so this could be an opportunity to add the other coordinate aromatic features
     """
     visited = [False]*len(mol.GetAtoms())
     queue = []
     aromatic_size = 0
+    ring_nitrogens = 0
+    atom_plane_deviation = 0
+    ring_plane_deviation = 0
+    conformer = mol.GetConformers()[0]
+    coords = conformer.GetPositions()
 
     if check_aromatic(atom):
         queue.append(atom)
         aromatic_size += 1
+        atom_plane_deviation = calc_plane_deviation(atom, coords)
     visited[atom.GetIdx()] = True
 
     while queue:
@@ -72,8 +95,11 @@ def enumerate_aromatic_size(mol, atom):
                     if eval_dihedrals(mol, s, neighbor):
                         queue.append(neighbor)
                         aromatic_size += 1
+                        ring_plane_deviation.append(calc_plane_deviation(neighbor, coords))
+                        if neighbor.GetAtomicNum() == 7:  # only after being sure it's in the same ring should we add N to count
+                            ring_nitrogens += 1
 
-    return aromatic_size
+    return aromatic_size, ring_nitrogens, atom_plane_deviation, ring_plane_deviation
 
 
 def embedded_aromatic(atom):
@@ -106,12 +132,17 @@ if __name__ == "__main__":
             for atom in m.GetAtoms():
                 symbol = atom.GetSymbol()
                 if symbol == "C":
-                    aromatic_extent.append(enumerate_aromatic_size(m, atom))
+                    aromex, rnit, apd, rpd = enumerate_aromatic_properties(m, atom))
+                    aromatic_extent.append(aromex)
+                    ring_nitrogen_list.append(rnit)
+                    atom_plane_deviation_list.append(apd)
+                    ring_plane_deviation_list.append(rpd)
                     ring_edge.append(embedded_aromatic(atom))
                     atom_num_list.append(atom.GetIdx())
                     catalyst.append(catalyst_from_filename)
 
     df = pd.DataFrame({"aromatic_extent": aromatic_extent, "ring_edge": ring_edge, "Atom Number": atom_num_list, 
-        "Catalyst Name": catalyst})
+        "ring_nitrogens": ring_nitrogen_list, "atom_plane_deviation": atom_plane_deviation_list, "Catalyst Name": catalyst,
+        "ring_plane_deviation": ring_plane_deviation_list})
     print(df)
     df.to_json(outfile)
