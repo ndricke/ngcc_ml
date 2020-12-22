@@ -46,15 +46,34 @@ def eval_dihedrals(mol, atom1, atom2):
         return True
 
 
+def calc_angle(a, b, c):
+    ba = a - b
+    bc = c - b
+    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle = np.arccos(cosine_angle)
+    return angle
+
+
 def calc_plane_deviation(atom, coords):
     """
     aromatic systems assumed to: be in a ring, be carbon (3 neighbors) or nitrogen (2 or 3 neighbors)
-    RDKit is unreliable for this because it doesn't handle nitrogen well, and double bond assignments in aromatic
-    systems can be incorrect
+
+
     """
-
-    for neighbor in atom.GetNeighbors():
-
+    n_coords = []
+    center_coord = coords[atom.GetIdx()]
+    for neighbor in atom.GetNeighbors():  # Get coords for all neighbors
+        n_coords.append(coords[neighbor.GetIdx()])
+        
+    # With 2 neighbors, the deviation is considered 0 since it should always be possible to make a plane
+    if len(n_coords) == 2:
+        plane_deviation = 0.0  
+    else:  # handle case with 3 atoms
+        assert len(n_coords) == 3  # if there are not 2 neighbors, then there ought to be 3
+        angles = []
+        for i,j in [[0,1],[0,2],[1,2]]:  # Calculate angle for the 3 unique pairs 0-1, 0-2, 1-2
+            angles.append(calc_angle(n_coords[i], center_coord, n_coords[j]))
+        plane_deviation = 360.0 - sum(angles)
         
     return plane_deviation
 
@@ -75,6 +94,7 @@ def enumerate_aromatic_properties(mol, atom):
     aromatic_size = 0
     ring_nitrogens = 0
     atom_plane_deviation = 0
+    ring_plane_deviation_list = []
     ring_plane_deviation = 0
     conformer = mol.GetConformers()[0]
     coords = conformer.GetPositions()
@@ -95,10 +115,10 @@ def enumerate_aromatic_properties(mol, atom):
                     if eval_dihedrals(mol, s, neighbor):
                         queue.append(neighbor)
                         aromatic_size += 1
-                        ring_plane_deviation.append(calc_plane_deviation(neighbor, coords))
+                        ring_plane_deviation_list.append(calc_plane_deviation(neighbor, coords))
                         if neighbor.GetAtomicNum() == 7:  # only after being sure it's in the same ring should we add N to count
                             ring_nitrogens += 1
-
+    ring_plane_deviation = np.mean(ring_plane_deviation_list)
     return aromatic_size, ring_nitrogens, atom_plane_deviation, ring_plane_deviation
 
 
