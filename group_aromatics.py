@@ -51,7 +51,7 @@ def calc_angle(a, b, c):
     bc = c - b
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
     angle = np.arccos(cosine_angle)
-    return angle
+    return angle * 180/np.pi
 
 
 def calc_plane_deviation(atom, coords):
@@ -103,6 +103,7 @@ def enumerate_aromatic_properties(mol, atom):
         queue.append(atom)
         aromatic_size += 1
         atom_plane_deviation = calc_plane_deviation(atom, coords)
+        ring_plane_deviation_list.append(atom_plane_deviation)
     visited[atom.GetIdx()] = True
 
     while queue:
@@ -118,7 +119,11 @@ def enumerate_aromatic_properties(mol, atom):
                         ring_plane_deviation_list.append(calc_plane_deviation(neighbor, coords))
                         if neighbor.GetAtomicNum() == 7:  # only after being sure it's in the same ring should we add N to count
                             ring_nitrogens += 1
-    ring_plane_deviation = np.mean(ring_plane_deviation_list)
+    
+    if len(ring_plane_deviation_list) > 0:
+        ring_plane_deviation = np.mean(ring_plane_deviation_list)
+    else:
+        ring_plane_deviation = 0
     return aromatic_size, ring_nitrogens, atom_plane_deviation, ring_plane_deviation
 
 
@@ -145,6 +150,7 @@ if __name__ == "__main__":
     outfile = sys.argv[2]
     
     aromatic_extent, ring_edge, atom_num_list, catalyst = [], [], [], []
+    ring_nitrogen_list, atom_plane_deviation_list, ring_plane_deviation_list = [], [], []
     for molfile in os.listdir(indir):
         m = Chem.MolFromMolFile(os.path.join(indir, molfile), removeHs=False)
         catalyst_from_filename = molfile.split("_")[0]
@@ -152,7 +158,7 @@ if __name__ == "__main__":
             for atom in m.GetAtoms():
                 symbol = atom.GetSymbol()
                 if symbol == "C":
-                    aromex, rnit, apd, rpd = enumerate_aromatic_properties(m, atom))
+                    aromex, rnit, apd, rpd = enumerate_aromatic_properties(m, atom)
                     aromatic_extent.append(aromex)
                     ring_nitrogen_list.append(rnit)
                     atom_plane_deviation_list.append(apd)
