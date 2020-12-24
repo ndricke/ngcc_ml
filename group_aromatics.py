@@ -151,6 +151,7 @@ if __name__ == "__main__":
     
     aromatic_extent, ring_edge, atom_num_list, catalyst = [], [], [], []
     ring_nitrogen_list, atom_plane_deviation_list, ring_plane_deviation_list = [], [], []
+    charge_list = []
     for molfile in os.listdir(indir):
         m = Chem.MolFromMolFile(os.path.join(indir, molfile), removeHs=False)
         catalyst_from_filename = molfile.split("_")[0]
@@ -158,6 +159,9 @@ if __name__ == "__main__":
             for atom in m.GetAtoms():
                 symbol = atom.GetSymbol()
                 if symbol == "C":
+                    chmult = molfile.split(".")[0].split("_")[-1]
+                    print(chmult)
+                    charge_list.append(int(chmult[1]))
                     aromex, rnit, apd, rpd = enumerate_aromatic_properties(m, atom)
                     aromatic_extent.append(aromex)
                     ring_nitrogen_list.append(rnit)
@@ -169,6 +173,6 @@ if __name__ == "__main__":
 
     df = pd.DataFrame({"aromatic_extent": aromatic_extent, "ring_edge": ring_edge, "Atom Number": atom_num_list, 
         "ring_nitrogens": ring_nitrogen_list, "atom_plane_deviation": atom_plane_deviation_list, "Catalyst Name": catalyst,
-        "ring_plane_deviation": ring_plane_deviation_list})
+        "ring_plane_deviation": ring_plane_deviation_list, "charge": charge_list})
     print(df)
     df.to_json(outfile)
