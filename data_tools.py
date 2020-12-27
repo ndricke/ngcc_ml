@@ -35,6 +35,17 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from itertools import product
 
 
+def process_data(df_in, oneHotCols=[], scaledCols=[]):
+    df = df_in.copy()
+    scaler = StandardScaler()
+    oneHotEncoder = OneHotEncoder(categories = "auto", sparse = False)
+    if scaledCols != []:
+        df[scaledCols] = scaler.fit_transform(df[scaledCols])
+    #if oneHotCols != []:
+    #    df[encoded_columns] = oneHotEncoder.fit_transform(alldata[oneHotCols])
+    return df
+
+
 def plot_coefficients(classifier, feature_names, top_features=5):
     coef = classifier.coef_.ravel()
     top_positive_coefficients = np.argsort(coef)[-top_features:]
