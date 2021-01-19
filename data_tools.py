@@ -4,9 +4,7 @@ import os
 import re
 import sys
 import matplotlib.pyplot as plt
-import seaborn
-import rdkit
-from rdkit import Chem
+#import seaborn
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
@@ -28,7 +26,6 @@ from sklearn.model_selection import train_test_split
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn import svm
-from math import sqrt
 from sklearn.gaussian_process import GaussianProcessRegressor
 
 
