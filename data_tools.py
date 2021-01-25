@@ -32,6 +32,17 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from itertools import product
 
 
+def scale_data(train, test, feature_cols, target_col):
+        scaler = StandardScaler()
+        X_train_group = train[feature_cols]
+        X_test_group = test[feature_cols]
+        X_train_group = scaler.fit_transform(X_train_group)
+        X_test_group = scaler.transform(X_test_group)
+        y_test_group = test[target_col]
+        y_train_group = train[target_col]
+        return X_train_group, y_train_group, X_test_group, y_test_group
+
+
 def process_data(df_in, oneHotCols=[], scaledCols=[]):
     df = df_in.copy()
     scaler = StandardScaler()
